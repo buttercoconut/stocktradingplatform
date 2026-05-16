@@ -1,11 +1,8 @@
-# backend/app/models/stock.py
-from sqlalchemy import Column, Integer, String, Float
-from .database import Base
+from pydantic import BaseModel
 
-class Stock(Base):
-    __tablename__ = "stocks"
-    id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String, unique=True, index=True, nullable=False)
-    name = Column(String, nullable=False)
-    price = Column(Float, nullable=False)
-    exchange = Column(String, nullable=False)
+class Stock(BaseModel):
+    symbol: str
+    name: str
+    exchange: str
+    current_price: float
+    change_percent: float

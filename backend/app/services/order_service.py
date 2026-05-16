@@ -1,26 +1,47 @@
-# backend/app/services/order_service.py
-from sqlalchemy.orm import Session
-from ..models.order import Order, OrderStatus
-from ..models.stock import Stock
-from ..models.user import User
+from typing import Dict
+from uuid import uuid4
+from datetime import datetime
+from ..models.order import Order
 
-class OrderService:
-    def __init__(self, db: Session):
-        self.db = db
+# In-memory store for demo purposes
+orders_db: Dict[int, Order] = {}
 
-    def place_order(self, user_id: int, stock_symbol: str, quantity: int, side: str):
-        # Retrieve stock price from DB (in real scenario, fetch from market data)
-        stock = self.db.query(Stock).filter(Stock.symbol == stock_symbol).first()
-        if not stock:
-            raise ValueError("Stock not found")
-        # Calculate price (simplified: use current market price)
-        price = stock.price
-        order = Order(user_id=user_id, stock_id=stock.id, quantity=quantity, price=price, side=side, status=OrderStatus.PENDING)
-        self.db.add(order)
-        self.db.commit()
-        self.db.refresh(order)
-        # Simulate execution
-        order.status = OrderStatus.EXECUTED
-        self.db.commit()
-        self.db.refresh(order)
-        return order
+async def process_order(order_data) -> Order:
+    """Core order processing logic.
+    1. Validate order
+    2. Interact with brokerage API (mocked)
+    3. Persist order
+    4. Publish event to Kafka (mocked)
+    """
+    # 1. Validation
+    if order_data.side not in ("buy", "sell"):
+        raise ValueError("Invalid side")
+    if order_data.quantity <= 0:
+        raise ValueError("Quantity must be positive")
+
+    # 2. Mock brokerage API call
+    # In real implementation, call external REST API and handle response
+    brokerage_response = {
+        "status": "filled",
+        "executed_price": order_data.quantity * 100.0,  # dummy price
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+    # 3. Persist order
+    order_id = len(orders_db) + 1
+    new_order = Order(
+        order_id=order_id,
+        user_id=order_data.user_id,
+        symbol=order_data.symbol,
+        quantity=order_data.quantity,
+        side=order_data.side,
+        status=brokerage_response["status"],
+        price=brokerage_response["executed_price"],
+    )
+    orders_db[order_id] = new_order
+
+    # 4. Publish event (mock)
+    # In real code, produce to Kafka topic
+    # e.g., await kafka_producer.send("orders", value=order_id)
+
+    return new_order

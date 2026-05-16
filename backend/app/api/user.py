@@ -1,15 +1,17 @@
-# backend/app/api/user.py
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from ..database import get_db
-from ..services.user_service import UserService
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import List
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter()
 
-@router.get("/{user_id}")
-def read_user(user_id: int, db: Session = Depends(get_db)):
-    service = UserService(db)
-    user = service.get_user(user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user
+class User(BaseModel):
+    id: int
+    username: str
+
+# Dummy dependency for auth
+async def get_current_user() -> User:
+    return User(id=1, username="demo")
+
+@router.get("/me", response_model=User)
+async def read_me(current_user: User = Depends(get_current_user)):
+    return current_user

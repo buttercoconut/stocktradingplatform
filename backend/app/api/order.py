@@ -1,16 +1,27 @@
-# backend/app/api/order.py
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from ..database import get_db
-from ..services.order_service import OrderService
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import List
 
-router = APIRouter(prefix="/orders", tags=["orders"])
+router = APIRouter()
 
-@router.post("/")
-def place_order(user_id: int, stock_symbol: str, quantity: int, side: str, db: Session = Depends(get_db)):
-    service = OrderService(db)
-    try:
-        order = service.place_order(user_id, stock_symbol, quantity, side)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    return order
+class OrderCreate(BaseModel):
+    user_id: int
+    symbol: str
+    quantity: int
+    side: str  # "buy" or "sell"
+
+class OrderResponse(BaseModel):
+    order_id: int
+    status: str
+
+@router.post("/", response_model=OrderResponse)
+async def create_order(order: OrderCreate):
+    # Core logic will be in service
+    from ..services.order_service import process_order
+    result = await process_order(order)
+    return result
+
+@router.get("/", response_model=List[OrderResponse])
+async def list_orders():
+    # Placeholder
+    return []
